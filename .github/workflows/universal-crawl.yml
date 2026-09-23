@@ -1,0 +1,73 @@
+name: Universal Web Crawler
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_url:
+        description: "크롤링 시작 URL (예: https://example.com)"
+        required: true
+        type: string
+      mode:
+        description: "http=빠름 / browser=자바스크립트 사이트"
+        required: true
+        default: "http"
+        type: choice
+        options:
+          - http
+          - browser
+      max_pages:
+        description: "최대 몇 페이지까지 수집할지"
+        required: true
+        default: "50"
+        type: string
+      selector:
+        description: "선택사항: CSS 선택자 (비우면 본문 자동 추출)"
+        required: false
+        default: ""
+        type: string
+      delay:
+        description: "페이지 사이 대기시간(초)"
+        required: true
+        default: "0.7"
+        type: string
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: 저장소 불러오기
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r universal_requirements.txt
+
+      - name: 브라우저 설치
+        if: ${{ inputs.mode == 'browser' }}
+        run: python -m playwright install --with-deps chromium
+
+      - name: 크롤링 진행 상황
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python -u universal_crawl.py \
+            --url "${{ inputs.start_url }}" \
+            --mode "${{ inputs.mode }}" \
+            --max-pages "${{ inputs.max_pages }}" \
+            --selector "${{ inputs.selector }}" \
+            --delay "${{ inputs.delay }}" \
+            --output-dir universal_output
+
+      - name: 결과 파일 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-crawl-result
+          path: universal_output/*
+          if-no-files-found: warn
