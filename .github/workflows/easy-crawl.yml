@@ -1,0 +1,56 @@
+name: DCInside Easy Crawler (Progress)
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_posts:
+        description: "몇 개 글을 수집할지 (처음엔 100 추천)"
+        required: true
+        default: "100"
+        type: string
+      start_page:
+        description: "시작 페이지"
+        required: true
+        default: "1"
+        type: string
+      end_page:
+        description: "끝 페이지"
+        required: true
+        default: "5"
+        type: string
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: 저장소 불러오기
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r easy_requirements.txt
+
+      - name: 크롤링 진행 상황 보기
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python -u easy_crawl.py \
+            --gallery-id jett \
+            --start-page "${{ inputs.start_page }}" \
+            --end-page "${{ inputs.end_page }}" \
+            --max-posts "${{ inputs.max_posts }}" \
+            --output output/jett_comments.xlsx
+
+      - name: 결과 다운로드 파일 만들기
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jett-comments-xlsx
+          path: output/*.xlsx
+          if-no-files-found: warn
