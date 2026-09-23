@@ -13,6 +13,27 @@ def today_kst():
     return datetime.now(KST).strftime("%Y.%m.%d")
 
 
+def normalize_date(value: str, fallback: str = "") -> str:
+    """Accept loose inputs like '(2024 .12 .31).' and normalize to YYYY.MM.DD."""
+    value = (value or "").strip()
+    if not value:
+        return fallback
+
+    digits = [part for part in __import__("re").findall(r"\d+", value)]
+    if len(digits) < 3:
+        raise SystemExit(
+            f"날짜 형식 오류: {value!r}. 예: 2026.09.23 또는 2026-09-23"
+        )
+
+    year, month, day = map(int, digits[:3])
+    try:
+        parsed = datetime(year, month, day, tzinfo=KST)
+    except ValueError:
+        raise SystemExit(f"존재하지 않는 날짜입니다: {value!r}")
+
+    return parsed.strftime("%Y.%m.%d")
+
+
 def jsonl_to_csv(jsonl_path: Path, csv_path: Path):
     fields = [
         "gall_no",
@@ -58,8 +79,8 @@ def main():
     parser.add_argument("--end-date", default="")
     args = parser.parse_args()
 
-    start_date = args.start_date.strip() or today_kst()
-    end_date = args.end_date.strip() or start_date
+    start_date = normalize_date(args.start_date, today_kst())
+    end_date = normalize_date(args.end_date, start_date)
 
     out_dir = Path("output")
     out_dir.mkdir(parents=True, exist_ok=True)
