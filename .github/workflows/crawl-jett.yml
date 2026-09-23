@@ -1,0 +1,49 @@
+name: DCInside Jett Crawler
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "시작 날짜 (YYYY.MM.DD). 비우면 오늘(KST)"
+        required: false
+        type: string
+      end_date:
+        description: "종료 날짜 (YYYY.MM.DD). 비우면 시작 날짜와 같음"
+        required: false
+        type: string
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 저장소 불러오기
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 필요한 패키지 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt playwright
+          python -m playwright install --with-deps chromium
+
+      - name: 제트 마이너 갤러리 크롤링
+        run: |
+          python run_easy.py \
+            --gallery-id jett \
+            --gallery-type minor \
+            --start-date "${{ inputs.start_date }}" \
+            --end-date "${{ inputs.end_date }}"
+
+      - name: 결과 파일 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jett-crawl-result
+          path: output/*
+          if-no-files-found: warn
