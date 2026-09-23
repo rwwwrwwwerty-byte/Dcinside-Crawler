@@ -203,16 +203,50 @@ class DCArticleCrawler:
                 self.crawl_article_based_on_gall_no = False
 
     def _init_driver(self) -> webdriver.Chrome:
-        """Initialize the Selenium WebDriver."""
-        service = Service(ChromeDriverManager().install())
+        """Initialize Selenium with the Chromium installed by Playwright/Codespaces."""
+        import glob
+
+        chromium_patterns = [
+            os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome"),
+            os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome"),
+            os.path.expanduser("~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell"),
+            os.path.expanduser("~/.cache/ms-playwright/**/chrome"),
+        ]
+
+        chromium_paths = []
+        for pattern in chromium_patterns:
+            chromium_paths.extend(glob.glob(pattern, recursive=True))
+
+        chromium_paths = [
+            path for path in chromium_paths
+            if os.path.isfile(path) and os.access(path, os.X_OK)
+        ]
+
+        if not chromium_paths:
+            raise RuntimeError(
+                "Playwright Chromium을 찾을 수 없습니다. "
+                "터미널에서 'python -m playwright install --with-deps chromium'을 실행하세요."
+            )
+
+        chromium_binary = chromium_paths[0]
+        logger.info(f"Using Chromium binary: {chromium_binary}")
+
         options = webdriver.ChromeOptions()
+        options.binary_location = chromium_binary
+
         if self.is_headless:
-            # No Browser UI if headless
-            options.add_argument('--headless')
-        driver = webdriver.Chrome(service=service, options=options)
-        timeout_for_page_load = 10
-        driver.set_page_load_timeout(timeout_for_page_load)
-        
+            options.add_argument("--headless=new")
+
+        # Required/recommended for browser execution in GitHub Codespaces.
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+
+        # Selenium Manager resolves a compatible ChromeDriver for this Chromium.
+        driver = webdriver.Chrome(options=options)
+        driver.set_page_load_timeout(10)
+
         return driver
     
     def run(self):
