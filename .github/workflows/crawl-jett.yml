@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       start_date:
-        description: "시작 날짜 (YYYY.MM.DD). 비우면 오늘(KST)"
+        description: "시작 날짜. 예: 2026.09.23 (괄호/공백 있어도 자동 정리)"
         required: false
         type: string
       end_date:
-        description: "종료 날짜 (YYYY.MM.DD). 비우면 시작 날짜와 같음"
+        description: "종료 날짜. 예: 2026.09.23 (비우면 시작 날짜와 같음)"
         required: false
         type: string
 
